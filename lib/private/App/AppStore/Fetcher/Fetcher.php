@@ -69,31 +69,37 @@ abstract class Fetcher {
 	 * @return array
 	 */
 	protected function fetch($ETag, $content) {
-		$options = [];
 
-		if ($ETag !== '') {
-			$options['headers'] = [
-				'If-None-Match' => $ETag,
-			];
-		}
-
-		$client = $this->clientService->newClient();
-		$response = $client->get($this->endpointUrl, $options);
-
+		$systemConfig = \OC::$server->getSystemConfig();
+		$appstoreenabled = $systemConfig->getValue('appstoreenabled', true);
 		$responseJson = [];
-		if ($response->getStatusCode() === Http::STATUS_NOT_MODIFIED) {
-			$responseJson['data'] = json_decode($content, true);
-		} else {
-			$responseJson['data'] = json_decode($response->getBody(), true);
-			$ETag = $response->getHeader('ETag');
-		}
+		if (!$appstoreenabled) {
+			$options = [];
 
-		$responseJson['timestamp'] = $this->timeFactory->getTime();
-		$responseJson['ncversion'] = $this->config->getSystemValue('version');
-		if ($ETag !== '') {
-			$responseJson['ETag'] = $ETag;
-		}
+			if ($ETag !== '') {
+				$options['headers'] = [
+					'If-None-Match' => $ETag,
+				];
+			}
 
+			$client = $this->clientService->newClient();
+			$response = $client->get($this->endpointUrl, $options);
+
+			$responseJson = [];
+			if ($response->getStatusCode() === Http::STATUS_NOT_MODIFIED) {
+				$responseJson['data'] = json_decode($content, true);
+			} else {
+				$responseJson['data'] = json_decode($response->getBody(), true);
+				$ETag = $response->getHeader('ETag');
+			}
+
+			$responseJson['timestamp'] = $this->timeFactory->getTime();
+			$responseJson['ncversion'] = $this->config->getSystemValue('version');
+			if ($ETag !== '') {
+				$responseJson['ETag'] = $ETag;
+			}
+
+		}
 		return $responseJson;
 	}
 
@@ -102,43 +108,50 @@ abstract class Fetcher {
 	 *
 	 * @return array
 	 */
-	 public function get() {
-		$rootFolder = $this->appData->getFolder('/');
+	public function get() {
+		$systemConfig = \OC::$server->getSystemConfig();
+		$appstoreenabled = $systemConfig->getValue('appstoreenabled', true);
+		if (!$appstoreenabled) {
+			$rootFolder = $this->appData->getFolder('/');
 
-		$ETag = '';
-		$content = '';
+			$ETag = '';
+			$content = '';
 
-		try {
-			// File does already exists
-			$file = $rootFolder->getFile($this->fileName);
-			$jsonBlob = json_decode($file->getContent(), true);
-			if(is_array($jsonBlob)) {
-				/*
-				 * If the timestamp is older than 300 seconds request the files new
-				 * If the version changed (update!) also refresh
-				 */
-				if((int)$jsonBlob['timestamp'] > ($this->timeFactory->getTime() - self::INVALIDATE_AFTER_SECONDS) &&
-					isset($jsonBlob['ncversion']) && $jsonBlob['ncversion'] === $this->config->getSystemValue('version', '0.0.0')) {
-					return $jsonBlob['data'];
+			try {
+				// File does already exists
+				$file = $rootFolder->getFile($this->fileName);
+				$jsonBlob = json_decode($file->getContent(), true);
+				if (is_array($jsonBlob)) {
+					/*
+					 * If the timestamp is older than 300 seconds request the files new
+					 * If the version changed (update!) also refresh
+					 */
+					if ((int)$jsonBlob['timestamp'] > ($this->timeFactory->getTime() - self::INVALIDATE_AFTER_SECONDS) &&
+						isset($jsonBlob['ncversion']) && $jsonBlob['ncversion'] === $this->config->getSystemValue('version', '0.0.0')
+					) {
+						return $jsonBlob['data'];
+					}
+
+					if (isset($jsonBlob['ETag'])) {
+						$ETag = $jsonBlob['ETag'];
+						$content = json_encode($jsonBlob['data']);
+					}
 				}
-
-				if (isset($jsonBlob['ETag'])) {
-					$ETag = $jsonBlob['ETag'];
-					$content = json_encode($jsonBlob['data']);
-				}
+			} catch (NotFoundException $e) {
+				// File does not already exists
+				$file = $rootFolder->newFile($this->fileName);
 			}
-		} catch (NotFoundException $e) {
-			// File does not already exists
-			$file = $rootFolder->newFile($this->fileName);
-		}
 
-		// Refresh the file content
-		try {
-			$responseJson = $this->fetch($ETag, $content);
-			$file->putContent(json_encode($responseJson));
-			return json_decode($file->getContent(), true)['data'];
-		} catch (\Exception $e) {
-			return [];
+			// Refresh the file content
+			try {
+				$responseJson = $this->fetch($ETag, $content);
+				$file->putContent(json_encode($responseJson));
+				return json_decode($file->getContent(), true)['data'];
+			} catch (\Exception $e) {
+				return [];
+			}
 		}
+		# Appstore disabled
+		return [];
 	}
 }
