@@ -51,6 +51,7 @@ use OC\Diagnostics\EventLogger;
 use OC\Diagnostics\NullEventLogger;
 use OC\Diagnostics\NullQueryLogger;
 use OC\Diagnostics\QueryLogger;
+use OC\Federation\CloudIdManager;
 use OC\Files\Config\UserMountCache;
 use OC\Files\Config\UserMountCacheListener;
 use OC\Files\Mount\CacheMountProvider;
@@ -89,6 +90,7 @@ use OC\Security\TrustedDomainHelper;
 use OC\Session\CryptoWrapper;
 use OC\Tagging\TagMapper;
 use OCA\Theming\ThemingDefaults;
+use OCP\Federation\ICloudIdManager;
 use OCP\IL10N;
 use OCP\IServerContainer;
 use OCP\RichObjectStrings\IValidator;
@@ -806,6 +808,10 @@ class Server extends ServerContainer implements IServerContainer {
 
 		$this->registerService('LockdownManager', function (Server $c) {
 			return new LockdownManager();
+		});
+
+		$this->registerService(ICloudIdManager::class, function (Server $c) {
+			return new CloudIdManager();
 		});
 
 		/* To trick DI since we don't extend the DIContainer here */
@@ -1551,5 +1557,12 @@ class Server extends ServerContainer implements IServerContainer {
 	 */
 	public function getLockdownManager() {
 		return $this->query('LockdownManager');
+	}
+
+	/**
+	 * @return \OCP\Federation\ICloudIdManager
+	 */
+	public function getCloudIdManager() {
+		return $this->query(ICloudIdManager::class);
 	}
 }
