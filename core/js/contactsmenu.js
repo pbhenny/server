@@ -38,7 +38,7 @@
 			+ '        {{#each contact.actions}}'
 			+ '        <li><span class="{{icon}}">{{title}}</span></li>'
 			+ '        {{/each}}'
-			+ '        <li><span class="icon-info">Details</span></li>'
+			+ '        <li><span class="icon-info"><a href="/apps/contacts/#uri">Details</a></span></li>'
 			+ '    </ul>'
 			+ '</div>';
 
