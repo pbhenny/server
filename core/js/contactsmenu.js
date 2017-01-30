@@ -27,19 +27,29 @@
 
 	var LOADING_TEMPLATE = '<div class="icon-loading"></div>';
 	var CONTACT_TEMPLATE = '<div class="avatar"></div>'
-		+ '<div class="body">'
-		+ '    <div>{{contact.displayName}}</div>'
-		+ '    <div class="last-message">{{contact.lastMessage}}</div>'
-		+ '</div>'
-		+ '<span class="top-action icon-mail"></span>'
-		+ '<span class="other-actions icon-more"></span>';
+			+ '<div class="body">'
+			+ '    <div>{{contact.displayName}}</div>'
+			+ '    <div class="last-message">{{contact.lastMessage}}</div>'
+			+ '</div>'
+			+ '<span class="top-action {{contact.topAction.icon}}"></span>'
+			+ '<span class="other-actions icon-more"></span>'
+			+ '<div class="popovermenu bubble menu">'
+			+ '    <ul>'
+			+ '        {{#each contact.actions}}'
+			+ '        <li><span class="{{icon}}">{{title}}</span></li>'
+			+ '        {{/each}}'
+			+ '        <li><span class="icon-info">Details</span></li>'
+			+ '    </ul>'
+			+ '</div>';
 
 	/**
 	 * @class Contact
 	 */
 	var Contact = OC.Backbone.Model.extend({
 		defaults: {
-			name: 'Fritz'
+			displayName: '',
+			lastMessage: '',
+			actions: []
 		}
 	});
 
@@ -100,6 +110,10 @@
 		/** @type {Contact} */
 		_model: undefined,
 
+		events: {
+			'click .icon-more': '_onToggleActionsMenu'
+		},
+
 		/**
 		 * @param {object} data
 		 * @returns {undefined}
@@ -123,15 +137,18 @@
 		 * @returns {self}
 		 */
 		render: function() {
-			console.log('render contacts list item', this._model);
-
 			this.$el.html(this.template({
 				contact: this._model.toJSON()
 			}));
+			this.delegateEvents();
 
 			this.$('.avatar').imageplaceholder(this._model.get('displayName', 'displayName'));
 
 			return this;
+		},
+
+		_onToggleActionsMenu: function() {
+			this.$('.menu').toggleClass('open');
 		}
 	});
 
@@ -166,7 +183,6 @@
 		 * @returns {undefined}
 		 */
 		showLoading: function() {
-			console.log('show loading');
 			this.render({
 				loading: true
 			});
@@ -177,7 +193,6 @@
 		 * @returns {undefined}
 		 */
 		showContacts: function(contacts) {
-			console.log('show contacts');
 			this.render({
 				loading: false,
 				contacts: contacts
@@ -189,8 +204,6 @@
 		 * @returns {self}
 		 */
 		render: function(data) {
-			console.log('render contacts menu');
-
 			if (!!data.loading) {
 				this.$el.html(this.template(data));
 			} else {
@@ -255,12 +268,10 @@
 		 */
 		_toggleVisibility: function() {
 			if (!this._open) {
-				console.log('open');
 				this._loadContacts();
 				this.$el.addClass('open');
 				this._open = true;
 			} else {
-				console.log('close');
 				this.$el.removeClass('open');
 				this._open = false;
 			}
@@ -285,7 +296,6 @@
 
 			self._view.showLoading();
 			self._contactsPromise.then(function(contacts) {
-				console.log('contacts loaded!');
 				self._view.showContacts(contacts);
 			}, function(e) {
 				console.error('could not load contacts', e);

@@ -1075,6 +1075,7 @@ span.ui-icon {
 
 	div.contact {
 		display: flex;
+		position: relative;
 		align-items: center;
 		padding: 10px;
 		border-bottom: 1px solid #eeeeee;
@@ -1111,10 +1112,17 @@ span.ui-icon {
 			height: 16px;
 			padding: 8px;
 			opacity: 0.5;
+			cursor: pointer;
 
 			:hover {
 				opacity: 1;
 			}
+		}
+
+		/* actions menu */
+		.menu {
+			right: 3px;
+			top: 53px;
 		}
 	}
 

@@ -43,24 +43,30 @@ class ContactsMenuController extends Controller {
 			[
 				'id' => 123,
 				'displayName' => 'Björn Schießle',
-				'actions' => [
-					
+				'topAction' => [
+					'id' => 'share',
+					'title' => 'Share',
+					'icon' => 'icon-share',
+					'hyperlink' => '/apps/files/134'
 				],
+				'actions' => [],
 				'lastMessage' => '',
 			],
 			[
 				'id' => 321,
 				'displayName' => 'Frank Karlitschek',
+				'topAction' => [
+					'id' => 'mail',
+					'title' => 'Mail',
+					'icon' => 'icon-mail',
+					'hyperlink' => '/apps/mail/12345'
+				],
 				'actions' => [
 					[
-						'id' => 'mail',
-						'icon' => 'icon-mail',
-						'hyperlink' => '/apps/mail/12345'
-					],
-					[
 						'id' => 'call',
-						'icon' => 'icon-call',
-						'hyperlink' => '/apps/spreed/12345'
+						'title' => 'Call',
+						'icon' => 'icon-user',
+						'hyperlink' => '/apps/spreed/12345',
 					],
 				],
 				'lastMessage' => 'See you later, crocodile!',
@@ -68,17 +74,25 @@ class ContactsMenuController extends Controller {
 			[
 				'id' => 345,
 				'displayName' => 'Jos Poortvliet',
-				'actions' => [
-					
+				'topAction' => [
+					'id' => 'mail',
+					'title' => 'Mail',
+					'icon' => 'icon-mail',
+					'hyperlink' => '/apps/mail/654'
 				],
+				'actions' => [],
 				'lastMessage' => 'Animi corrupti non et similique maxime soluta provident. Debitis eveniet architecto fuga culpa ea et. Quae occaecati ipsum suscipit. Ipsum quo unde et tempora architecto ex magnam. Quaerat cumque ad aut. Perferendis id est cumque.'
 			],
 			[
 				'id' => 543,
 				'displayName' => 'Jan-Christoph Borchardt',
-				'actions' => [
-					
+				'topAction' => [
+					'id' => 'mail',
+					'title' => 'Mail',
+					'icon' => 'icon-mail',
+					'hyperlink' => '/apps/mail/789'
 				],
+				'actions' => [],
 				'lastMessage' => 'Es keat oanfach viel mehr gschmust',
 			],
 		];
