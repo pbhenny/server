@@ -26,6 +26,10 @@
 	'use strict';
 
 	var LOADING_TEMPLATE = '<div class="icon-loading"></div>';
+	var CONTENT_TEMPLATE = '<div>'
+			+ '    <input id="contactsmenu-search" type="search" placeholder="Search contacts …">'
+			+ '    <div id="contactsmenu-contacts"></div>'
+			+ '</div>';
 	var CONTACT_TEMPLATE = '<div class="avatar"></div>'
 			+ '<div class="body">'
 			+ '    <div>{{contact.displayName}}</div>'
@@ -158,17 +162,35 @@
 	var ContactsMenuView = OC.Backbone.View.extend({
 
 		/** @type {undefined|function} */
-		_template: undefined,
+		_loadingTemplate: undefined,
+
+		/** @type {undefined|function} */
+		_contentTemplate: undefined,
+
+		events: {
+			'keyup #contactsmenu-search': '_onSearch'
+		},
 
 		/**
 		 * @param {object} data
-		 * @returns {undefined}
+		 * @returns {string}
 		 */
-		template: function(data) {
-			if (!this._template) {
-				this._template = Handlebars.compile(LOADING_TEMPLATE);
+		loadingTemplate: function(data) {
+			if (!this._loadingTemplate) {
+				this._loadingTemplate = Handlebars.compile(LOADING_TEMPLATE);
 			}
-			return this._template(data);
+			return this._loadingTemplate(data);
+		},
+
+		/**
+		 * @param {object} data
+		 * @returns {string}
+		 */
+		contentTemplate: function(data) {
+			if (!this._contentTemplate) {
+				this._contentTemplate = Handlebars.compile(CONTENT_TEMPLATE);
+			}
+			return this._contentTemplate(data);
 		},
 
 		/**
@@ -205,16 +227,27 @@
 		 */
 		render: function(data) {
 			if (!!data.loading) {
-				this.$el.html(this.template(data));
+				this.$el.html(this.loadingTemplate(data));
 			} else {
 				var list = new ContactsListView({
 					collection: data.contacts
 				});
 				list.render();
-				this.$el.html(list.$el);
+				this.$el.html(this.contentTemplate(data));
+				this.$('#contactsmenu-contacts').html(list.$el);
+
+				// Focus search
+				this.$('#contactsmenu-search').focus();
 			}
 
 			return this;
+		},
+
+		/**
+		 * @returns {undefined}
+		 */
+		_onSearch: function() {
+			console.info('searching …', this.$('#contactsmenu-search').val());
 		}
 
 	});
