@@ -36,9 +36,11 @@
 
 namespace OC\Files\Cache;
 
+use Doctrine\DBAL\Driver\Statement;
 use OCP\Files\Cache\ICache;
 use OCP\Files\Cache\ICacheEntry;
 use \OCP\Files\IMimeTypeLoader;
+use OCP\Files\Search\ISearchQuery;
 use OCP\IDBConnection;
 
 /**
@@ -79,6 +81,9 @@ class Cache implements ICache {
 	 */
 	protected $connection;
 
+	/** @var QuerySearchHelper */
+	protected $querySearchHelper;
+
 	/**
 	 * @param \OC\Files\Storage\Storage|string $storage
 	 */
@@ -95,6 +100,7 @@ class Cache implements ICache {
 		$this->storageCache = new Storage($storage);
 		$this->mimetypeLoader = \OC::$server->getMimeTypeLoader();
 		$this->connection = \OC::$server->getDatabaseConnection();
+		$this->querySearchHelper = new QuerySearchHelper($this->mimetypeLoader);
 	}
 
 	/**
@@ -360,7 +366,7 @@ class Cache implements ICache {
 						$queryParts[] = '`mtime`';
 					}
 				} elseif ($name === 'encrypted') {
-					if(isset($data['encryptedVersion'])) {
+					if (isset($data['encryptedVersion'])) {
 						$value = $data['encryptedVersion'];
 					} else {
 						// Boolean to integer conversion
@@ -609,13 +615,21 @@ class Cache implements ICache {
 			[$this->getNumericStorageId(), $pattern]
 		);
 
+		return $this->searchResultToCacheEntries($result);
+	}
+
+	/**
+	 * @param Statement $result
+	 * @return CacheEntry[]
+	 */
+	private function searchResultToCacheEntries(Statement $result) {
 		$files = [];
 		while ($row = $result->fetch()) {
 			$row['mimetype'] = $this->mimetypeLoader->getMimetypeById($row['mimetype']);
 			$row['mimepart'] = $this->mimetypeLoader->getMimetypeById($row['mimepart']);
 			$files[] = $row;
 		}
-		return array_map(function(array $data) {
+		return array_map(function (array $data) {
 			return new CacheEntry($data);
 		}, $files);
 	}
@@ -637,18 +651,30 @@ class Cache implements ICache {
 				FROM `*PREFIX*filecache` WHERE ' . $where . ' AND `storage` = ?';
 		$mimetype = $this->mimetypeLoader->getId($mimetype);
 		$result = $this->connection->executeQuery($sql, array($mimetype, $this->getNumericStorageId()));
-		$files = array();
-		while ($row = $result->fetch()) {
-			$row['mimetype'] = $this->mimetypeLoader->getMimetypeById($row['mimetype']);
-			$row['mimepart'] = $this->mimetypeLoader->getMimetypeById($row['mimepart']);
-			$files[] = $row;
-		}
-		return array_map(function (array $data) {
-			return new CacheEntry($data);
-		}, $files);
+
+		return $this->searchResultToCacheEntries($result);
 	}
 
-	/**
+	public function searchQuery(ISearchQuery $searchQuery) {
+		$builder = \OC::$server->getDatabaseConnection()->getQueryBuilder();
+
+		$query = $builder->select(['fileid', 'storage', 'path', 'parent', 'name', 'mimetype', 'mimepart', 'size', 'mtime', 'encrypted', 'etag', 'permissions', 'checksum'])
+			->from('filecache')
+			->where($builder->expr()->eq('storage', $builder->createNamedParameter($this->getNumericStorageId())))
+			->andWhere($this->querySearchHelper->searchOperatorToDBExpr($builder, $searchQuery->getSearchOperation()));
+
+		if ($searchQuery->getLimit()) {
+			$query->setMaxResults($searchQuery->getLimit());
+		}
+		if ($searchQuery->getOffset()) {
+			$query->setFirstResult($searchQuery->getOffset());
+		}
+
+		$result = $query->execute();
+		return $this->searchResultToCacheEntries($result);
+	}
+
+		/**
 	 * Search for files by tag of a given users.
 	 *
 	 * Note that every user can tag files differently.
